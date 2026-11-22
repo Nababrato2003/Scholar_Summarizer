@@ -44,11 +44,6 @@ def handle_file_too_large(e):
 
 
 @app.route("/")
-@app.route("/index")
-@app.route("/index.py")
-@app.route("/api")
-@app.route("/api/index")
-@app.route("/api/index.py")
 def home():
     """Renders the main dashboard."""
     api_key_configured = bool(os.getenv("GEMINI_API_KEY"))
