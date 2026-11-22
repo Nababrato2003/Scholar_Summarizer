@@ -4,9 +4,13 @@ Simulates a user uploading a multi-page PDF paper, extracts sections,
 generates Gemini peer critique + scoring, and verifies the downloadable report.
 """
 
-from test_parser import create_sample_pdf
-from parser import extract_paper_content
-from model import analyze_paper
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from tests.test_parser import create_sample_pdf
+from core.parser import extract_paper_content
+from core.model import analyze_paper
 from app import generate_markdown_report
 
 

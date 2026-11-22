@@ -10,9 +10,9 @@ from flask import Flask, render_template, request, jsonify, Response, session
 from werkzeug.exceptions import RequestEntityTooLarge
 from dotenv import load_dotenv
 
-from parser import extract_paper_content, PDFParserError
-from model import analyze_paper
-from auth import (
+from core.parser import extract_paper_content, PDFParserError
+from core.model import analyze_paper
+from core.auth import (
     authenticate_or_register_step1,
     verify_otp_step2,
     resend_otp
@@ -27,6 +27,7 @@ app.secret_key = os.getenv("SECRET_KEY", "scholarcritic-super-secret-key-2026")
 # Max upload limit: 10 Megabytes
 MAX_FILE_SIZE_MB = 10
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_MB * 1024 * 1024  # 10 MB in bytes
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 
 @app.errorhandler(RequestEntityTooLarge)

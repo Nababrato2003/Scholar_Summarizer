@@ -1151,25 +1151,53 @@ textarea:focus {
     display: flex;
     align-items: center;
 }
-.input-with-icon i {
+.input-with-icon .field-icon {
     position: absolute;
     left: 14px;
     color: var(--text-muted);
     font-size: 0.95rem;
+    pointer-events: none;
+    z-index: 2;
 }
 .input-with-icon input {
     width: 100%;
     background: var(--dropzone-bg);
     border: 1px solid var(--dropzone-border);
     border-radius: 12px;
-    padding: 12px 14px 12px 40px;
+    padding: 12px 42px 12px 40px;
     font-size: 0.9rem;
     color: var(--text-hero);
     outline: none;
+    transition: var(--transition);
 }
 .input-with-icon input:focus {
     border-color: var(--coral);
     box-shadow: 0 0 0 3px var(--coral-glow);
+}
+.btn-toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    z-index: 2;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.btn-toggle-password:hover {
+    color: var(--coral);
+}
+.btn-toggle-password:focus {
+    outline: none;
+    color: var(--coral);
 }
 
 /* OTP Input */

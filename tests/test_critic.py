@@ -4,9 +4,13 @@ Tests model.analyze_paper with sample academic paper content, verifies
 JSON structure, critic engine fields, and numeric scoring.
 """
 
-from parser import extract_paper_content
-from test_parser import create_sample_pdf
-from model import analyze_paper
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from core.parser import extract_paper_content
+from tests.test_parser import create_sample_pdf
+from core.model import analyze_paper
 
 
 def test_critic_engine():

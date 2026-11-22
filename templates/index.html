@@ -450,7 +450,7 @@
                     <div class="auth-field">
                         <label for="auth-email">Email Address</label>
                         <div class="input-with-icon">
-                            <i class="fas fa-envelope"></i>
+                            <i class="fas fa-envelope field-icon"></i>
                             <input type="email" id="auth-email" placeholder="name@domain.com" required autocomplete="email">
                         </div>
                     </div>
@@ -458,8 +458,11 @@
                     <div class="auth-field">
                         <label for="auth-password">Password</label>
                         <div class="input-with-icon">
-                            <i class="fas fa-lock"></i>
+                            <i class="fas fa-lock field-icon"></i>
                             <input type="password" id="auth-password" placeholder="At least 6 characters" required autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility()" title="Toggle password visibility" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye" id="password-toggle-icon"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -557,9 +560,32 @@
             alert("Quickly test ScholarCritic by clicking either of the test paper buttons under the headline: 'Attention Is All You Need' or 'LoRA Adaptation'!");
         }
 
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('auth-password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (!passwordInput || !toggleIcon) return;
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+                toggleIcon.setAttribute('title', 'Hide password');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+                toggleIcon.setAttribute('title', 'Show password');
+            }
+        }
+
         // --- AUTHENTICATION MODAL CONTROLLER ---
         function openAuthModal(forSignup = false) {
             setAuthMode(forSignup);
+            const passwordInput = document.getElementById('auth-password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (passwordInput) passwordInput.type = 'password';
+            if (toggleIcon) {
+                toggleIcon.className = 'fas fa-eye';
+                toggleIcon.setAttribute('title', 'Show password');
+            }
             document.getElementById('auth-step-1').style.display = 'block';
             document.getElementById('auth-step-2').style.display = 'none';
             document.getElementById('auth-error-1').style.display = 'none';
