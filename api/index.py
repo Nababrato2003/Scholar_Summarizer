@@ -11,23 +11,30 @@ class VercelPathMiddleware:
     """
     WSGI Middleware for Vercel Serverless Functions.
     Resolves the original request path from Vercel edge proxy headers
-    (X-Matched-Path / X-Forwarded-Path) so Flask routes match accurately.
+    and normalizes all Vercel function rewrite prefixes.
     """
     def __init__(self, wsgi_app):
         self.wsgi_app = wsgi_app
 
     def __call__(self, environ, start_response):
-        matched_path = (
+        # 1. Check all possible Vercel forwarding headers
+        path = (
             environ.get("HTTP_X_MATCHED_PATH") or 
             environ.get("HTTP_X_FORWARDED_PATH") or 
-            environ.get("HTTP_X_ORIGINAL_URI")
+            environ.get("HTTP_X_ORIGINAL_URI") or
+            environ.get("PATH_INFO", "")
         )
-        if matched_path:
-            environ["PATH_INFO"] = matched_path
-        elif environ.get("PATH_INFO", "").startswith("/api/index"):
-            remainder = environ["PATH_INFO"][len("/api/index"):]
-            environ["PATH_INFO"] = remainder if remainder else "/"
+        
+        # 2. Normalize and strip internal Vercel function prefixes
+        for prefix in ["/api/index.py", "/api/index", "/api", "/index.py", "/index"]:
+            if path == prefix:
+                path = "/"
+                break
+            elif path.startswith(prefix + "/"):
+                path = path[len(prefix):]
+                break
 
+        environ["PATH_INFO"] = path if path else "/"
         return self.wsgi_app(environ, start_response)
 
 

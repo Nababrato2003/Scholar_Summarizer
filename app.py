@@ -21,7 +21,12 @@ from core.auth import (
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
 app.secret_key = os.getenv("SECRET_KEY", "scholarcritic-super-secret-key-2026")
 
 # Max upload limit: 10 Megabytes
@@ -39,6 +44,11 @@ def handle_file_too_large(e):
 
 
 @app.route("/")
+@app.route("/index")
+@app.route("/index.py")
+@app.route("/api")
+@app.route("/api/index")
+@app.route("/api/index.py")
 def home():
     """Renders the main dashboard."""
     api_key_configured = bool(os.getenv("GEMINI_API_KEY"))
