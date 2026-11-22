@@ -82,6 +82,11 @@ flowchart TD
   - ⚖️ **Critic Report Tab**: Strengths, weaknesses, dataset sufficiency, potential bias, and validation rigor.
   - 💡 **Future Directions Tab**: Actionable research improvements, alternative paradigms, and industry use cases.
 - [x] **Step 4.4**: Implement report export functionality (One-click Download Review as Markdown / JSON).
+- [x] **Step 4.5**: Secure Authentication System with 2-Factor Email OTP:
+  - **MongoDB Atlas** integration for credential storage & bcrypt password hashing.
+  - **Gmail SMTP Engine** for sending 6-digit verification OTP codes with 10-minute expiry.
+  - Glassmorphic modal for Sign In, Account Creation, and OTP verification.
+  - Session protection for paper analysis.
 
 ---
 

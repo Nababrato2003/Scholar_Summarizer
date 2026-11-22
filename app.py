@@ -1,22 +1,28 @@
 """
 app.py - Autonomous Research Paper Summarizer + Critic
-Flask Backend powered by Google Gemini (gemini-3.5-flash) and PyMuPDF.
-Enforces strict 10MB file upload limits with client & server validation.
+Flask Backend powered by Google Gemini (gemini-3.5-flash), PyMuPDF,
+and MongoDB Atlas Authentication with Gmail OTP 2-Factor Verification.
 """
 
 import os
 import json
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, session
 from werkzeug.exceptions import RequestEntityTooLarge
 from dotenv import load_dotenv
 
 from parser import extract_paper_content, PDFParserError
 from model import analyze_paper
+from auth import (
+    authenticate_or_register_step1,
+    verify_otp_step2,
+    resend_otp
+)
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "scholarcritic-super-secret-key-2026")
 
 # Max upload limit: 10 Megabytes
 MAX_FILE_SIZE_MB = 10
@@ -35,15 +41,115 @@ def handle_file_too_large(e):
 def home():
     """Renders the main dashboard."""
     api_key_configured = bool(os.getenv("GEMINI_API_KEY"))
-    return render_template("index.html", max_file_size_mb=MAX_FILE_SIZE_MB, api_key_configured=api_key_configured)
+    user_email = session.get("user_email")
+    return render_template(
+        "index.html",
+        max_file_size_mb=MAX_FILE_SIZE_MB,
+        api_key_configured=api_key_configured,
+        user_email=user_email
+    )
 
+
+# --- AUTHENTICATION & OTP ROUTES ---
+
+@app.route("/auth/status", methods=["GET"])
+def auth_status():
+    """Returns current user session authentication state."""
+    user_email = session.get("user_email")
+    return jsonify({
+        "authenticated": bool(user_email),
+        "email": user_email
+    })
+
+
+@app.route("/auth/login", methods=["POST"])
+def auth_step1():
+    """
+    Step 1: Validates credentials (or registers new account), generates OTP,
+    and sends it to the user's email address.
+    """
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
+    password = data.get("password", "").strip()
+    is_signup = bool(data.get("is_signup", False))
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+
+    success, message = authenticate_or_register_step1(email, password, is_signup)
+    if not success:
+        return jsonify({"error": message}), 400
+
+    return jsonify({
+        "status": "otp_sent",
+        "message": message,
+        "email": email
+    })
+
+
+@app.route("/auth/verify-otp", methods=["POST"])
+def auth_step2():
+    """
+    Step 2: Verifies entered 6-digit OTP against MongoDB Atlas.
+    On success, stores user in session.
+    """
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
+    otp = data.get("otp", "").strip()
+
+    if not email or not otp:
+        return jsonify({"error": "Email and OTP code are required."}), 400
+
+    success, message = verify_otp_step2(email, otp)
+    if not success:
+        return jsonify({"error": message}), 400
+
+    # Authentication completed! Set session
+    session["user_email"] = email
+
+    return jsonify({
+        "status": "authenticated",
+        "message": "Authentication successful!",
+        "email": email
+    })
+
+
+@app.route("/auth/resend-otp", methods=["POST"])
+def auth_resend():
+    """Resends a new 6-digit OTP to the user's email."""
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+
+    success, message = resend_otp(email)
+    if not success:
+        return jsonify({"error": message}), 400
+
+    return jsonify({"status": "resent", "message": message})
+
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    """Logs out the user and clears session."""
+    session.pop("user_email", None)
+    return jsonify({"status": "logged_out", "message": "Successfully logged out."})
+
+
+# --- PAPER ANALYSIS & EXPORT ---
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
     """
     Analyzes an uploaded research paper PDF or pasted text.
-    Returns structured peer-review critique, summary, and scores as JSON.
+    Requires user to be authenticated with OTP.
     """
+    if not session.get("user_email"):
+        return jsonify({
+            "error": "Authentication required. Please sign in and verify with your email OTP to use ScholarCritic.",
+            "auth_required": True
+        }), 401
+
     if not os.getenv("GEMINI_API_KEY"):
         return jsonify({"error": "Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file."}), 400
 
