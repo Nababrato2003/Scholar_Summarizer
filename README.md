@@ -159,27 +159,7 @@ cd Scholar_Summarizer
 pip install -r requirements.txt
 ```
 
-### 3. Configure `.env`
-Copy `.env.example` to `.env` and fill in your credentials:
-```bash
-cp .env.example .env
-```
-```env
-# Google Gemini API Key (https://aistudio.google.com/)
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# MongoDB Atlas URI (https://www.mongodb.com/atlas)
-MONGO_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
-
-# Gmail SMTP Configuration for Email OTP Verification
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your_gmail_address@gmail.com
-# 16-character Google App Password (https://myaccount.google.com/apppasswords)
-MAIL_PASSWORD=your_16_character_app_password
-```
-
-### 4. Launch the Application
+### 3. Launch the Application
 ```bash
 python app.py
 ```
@@ -234,8 +214,15 @@ Scholar_Summarizer/
 ├── vercel.json                 # Vercel deployment configuration
 ├── Procfile                    # Cloud WSGI deployment command
 ├── .env.example                # Template for environment variables
+├── FUTURE_SCOPE.md             # Technical roadmap & edge case watchlist
 └── README.md                   # Project documentation
 ```
+
+---
+
+## 🔭 Future Scope & Known Limitations
+
+Detailed technical roadmap, upcoming feature milestones (arXiv link ingestion, audio summaries, interactive paper Q&A), and currently tracked edge cases are documented in **[FUTURE_SCOPE.md](FUTURE_SCOPE.md)**.
 
 ---
 
