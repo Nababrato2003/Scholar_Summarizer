@@ -13,6 +13,11 @@ from typing import Dict, Any, Tuple
 import bcrypt
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+try:
+    import certifi
+    _ca_file = certifi.where()
+except Exception:
+    _ca_file = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,7 +34,13 @@ def get_db():
         raise ValueError("MONGO_URI is missing from environment.")
     
     if _mongo_client is None:
-        _mongo_client = MongoClient(mongo_uri, server_api=ServerApi('1'), serverSelectionTimeoutMS=5000)
+        client_kwargs = {
+            "server_api": ServerApi('1'),
+            "serverSelectionTimeoutMS": 5000
+        }
+        if _ca_file:
+            client_kwargs["tlsCAFile"] = _ca_file
+        _mongo_client = MongoClient(mongo_uri, **client_kwargs)
     
     return _mongo_client["scholar_critic"]
 

@@ -11,6 +11,11 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import gridfs
+try:
+    import certifi
+    _ca_file = certifi.where()
+except Exception:
+    _ca_file = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,7 +35,13 @@ def get_storage_db():
         raise ValueError("Neither MONGO_STORAGE_URI nor MONGO_URI is configured.")
 
     if _storage_client is None:
-        _storage_client = MongoClient(uri, server_api=ServerApi('1'), serverSelectionTimeoutMS=5000)
+        client_kwargs = {
+            "server_api": ServerApi('1'),
+            "serverSelectionTimeoutMS": 5000
+        }
+        if _ca_file:
+            client_kwargs["tlsCAFile"] = _ca_file
+        _storage_client = MongoClient(uri, **client_kwargs)
 
     return _storage_client["scholar_critic_storage"]
 
