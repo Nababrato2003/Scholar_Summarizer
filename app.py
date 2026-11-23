@@ -17,6 +17,13 @@ from core.auth import (
     verify_otp_step2,
     resend_otp
 )
+from core.storage import (
+    save_paper_history,
+    get_user_history,
+    get_paper_review,
+    get_paper_pdf,
+    delete_paper_history
+)
 
 # Load environment variables
 load_dotenv()
@@ -194,8 +201,24 @@ def analyze():
         # Step 2: Run Gemini Critic Engine
         analysis = analyze_paper(paper_data)
 
+        # Step 3: Persist to History & GridFS for authenticated users
+        saved_history_id = None
+        user_email = session.get("user_email")
+        if user_email and isinstance(paper_source, bytes):
+            try:
+                orig_filename = uploaded_file.filename if 'uploaded_file' in locals() and uploaded_file else "paper.pdf"
+                saved_history_id = save_paper_history(
+                    user_email=user_email,
+                    filename=orig_filename,
+                    pdf_bytes=paper_source,
+                    analysis_result=analysis
+                )
+            except Exception as se:
+                print(f"Warning: Failed to persist paper to history: {se}")
+
         return jsonify({
             "status": "success",
+            "saved_history_id": saved_history_id,
             "paper_data": {
                 "title": paper_data.get("title"),
                 "total_pages": paper_data.get("total_pages", 1),
@@ -304,6 +327,62 @@ def export_report():
         mimetype="text/markdown",
         headers={"Content-Disposition": "attachment;filename=ScholarCritic_Report.md"}
     )
+
+
+# --- PAPER HISTORY & PDF RETRIEVAL ROUTES ---
+
+@app.route("/history", methods=["GET"])
+def history_list():
+    """Returns list of past analyzed papers for the logged-in user."""
+    user_email = session.get("user_email")
+    if not user_email:
+        return jsonify({"error": "Authentication required.", "history": []}), 401
+    try:
+        history = get_user_history(user_email)
+        return jsonify({"status": "success", "history": history})
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve history: {str(e)}", "history": []}), 500
+
+
+@app.route("/history/<paper_id>", methods=["GET"])
+def history_review(paper_id):
+    """Retrieves full cached review JSON for a specific paper."""
+    user_email = session.get("user_email")
+    if not user_email:
+        return jsonify({"error": "Authentication required."}), 401
+    review = get_paper_review(paper_id, user_email)
+    if not review:
+        return jsonify({"error": "Review not found or unauthorized."}), 404
+    return jsonify({"status": "success", "analysis": review})
+
+
+@app.route("/history/<paper_id>/download", methods=["GET"])
+def history_download(paper_id):
+    """Streams the stored original binary PDF from GridFS to the user."""
+    user_email = session.get("user_email")
+    if not user_email:
+        return jsonify({"error": "Authentication required."}), 401
+    result = get_paper_pdf(paper_id, user_email)
+    if not result:
+        return jsonify({"error": "PDF file not found or unauthorized."}), 404
+    filename, pdf_bytes = result
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@app.route("/history/<paper_id>", methods=["DELETE"])
+def history_delete(paper_id):
+    """Deletes paper history record and deletes its PDF chunks from GridFS."""
+    user_email = session.get("user_email")
+    if not user_email:
+        return jsonify({"error": "Authentication required."}), 401
+    success = delete_paper_history(paper_id, user_email)
+    if not success:
+        return jsonify({"error": "Failed to delete paper history record."}), 400
+    return jsonify({"status": "success", "message": "Paper and PDF removed from your history."})
 
 
 if __name__ == "__main__":

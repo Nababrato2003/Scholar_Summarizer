@@ -1265,6 +1265,194 @@ textarea:focus {
     margin-top: 50px;
 }
 
+/* History & Library Button in Navbar */
+.btn-library-nav {
+    background: var(--glass-card-bg);
+    color: var(--text-hero);
+    border: 1px solid var(--glass-card-border);
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+}
+.btn-library-nav:hover {
+    border-color: var(--coral);
+    color: var(--coral);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.history-badge {
+    background: var(--coral);
+    color: #FFFFFF;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    min-width: 18px;
+    text-align: center;
+    display: none;
+}
+
+/* History Modal Box */
+.history-modal-box {
+    max-width: 760px;
+    width: 92%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 24px;
+    overflow: hidden;
+}
+.history-cards-container {
+    overflow-y: auto;
+    max-height: calc(85vh - 160px);
+    padding-right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+}
+.history-cards-container::-webkit-scrollbar {
+    width: 6px;
+}
+.history-cards-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.history-cards-container::-webkit-scrollbar-thumb {
+    background: var(--glass-card-border);
+    border-radius: 4px;
+}
+
+/* History Item Card */
+.history-item-card {
+    background: var(--dropzone-bg);
+    border: 1px solid var(--glass-card-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    transition: all 0.2s ease;
+}
+.history-item-card:hover {
+    border-color: var(--coral);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.hcard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+.hcard-title-group {
+    flex: 1;
+}
+.hcard-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-hero);
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+.hcard-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.hcard-meta i {
+    color: var(--coral);
+}
+.hcard-score-badge {
+    text-align: right;
+    white-space: nowrap;
+}
+.hcard-stars {
+    color: #F59E0B;
+    font-size: 0.95rem;
+    display: block;
+    letter-spacing: 1px;
+}
+.hcard-verdict {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--coral);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.hcard-tldr {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--coral);
+}
+[data-theme="dark"] .hcard-tldr {
+    background: rgba(255, 255, 255, 0.03);
+}
+.hcard-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.btn-hcard-primary {
+    background: var(--coral);
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s;
+}
+.btn-hcard-primary:hover {
+    opacity: 0.9;
+}
+.btn-hcard-secondary {
+    background: transparent;
+    color: var(--text-hero);
+    border: 1px solid var(--glass-card-border);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-hcard-secondary:hover {
+    border-color: var(--coral);
+    color: var(--coral);
+}
+.btn-hcard-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 6px;
+    margin-left: auto;
+    border-radius: 6px;
+    transition: color 0.2s;
+}
+.btn-hcard-delete:hover {
+    color: #EF4444;
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
     .hero-split-section {

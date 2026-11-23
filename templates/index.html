@@ -50,6 +50,10 @@
                     <!-- Auth State in Navbar -->
                     <div id="nav-auth-section">
                         {% if user_email %}
+                            <button type="button" class="btn-library-nav" onclick="openHistoryModal()" title="View past paper summaries & download PDFs">
+                                <i class="fas fa-bookmark"></i> <span>My Library</span>
+                                <span class="history-badge" id="history-badge-count">0</span>
+                            </button>
                             <div class="user-profile-pill">
                                 <i class="fas fa-user-circle"></i>
                                 <span class="user-email-text">{{ user_email }}</span>
@@ -504,6 +508,45 @@
         </div>
     </div>
 
+    <!-- Paper History & Library Modal -->
+    <div id="history-modal" class="auth-modal-overlay" style="display: none;" onclick="if(event.target === this) closeHistoryModal()">
+        <div class="auth-glass-box history-modal-box">
+            <button type="button" class="modal-close-btn" onclick="closeHistoryModal()" aria-label="Close modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-header">
+                <div class="modal-logo">
+                    <span>~</span> Scholar<strong>Critic</strong>
+                </div>
+                <h3>Your Research Library</h3>
+                <p>Access your past paper summaries, peer reviews, and re-download original PDFs anytime.</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="history-loading" style="text-align: center; padding: 30px; display: none;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--coral);"></i>
+                <p style="margin-top: 10px; color: var(--text-muted);">Fetching your library...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="history-empty" style="text-align: center; padding: 40px 20px; display: none;">
+                <div style="font-size: 3rem; color: var(--coral); margin-bottom: 12px; opacity: 0.8;">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--text-hero); margin-bottom: 6px;">No Papers Saved Yet</h4>
+                <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 380px; margin: 0 auto 16px;">
+                    Upload and analyze a PDF research paper while signed in, and it will automatically be archived here for instant review and download.
+                </p>
+                <button type="button" class="btn-pill-primary" style="margin: 0 auto;" onclick="closeHistoryModal(); triggerUploadClick();">
+                    <i class="fas fa-file-arrow-up"></i> Upload a Paper Now
+                </button>
+            </div>
+
+            <!-- Cards Container -->
+            <div id="history-list" class="history-cards-container"></div>
+        </div>
+    </div>
+
     <!-- Frontend Controller Script -->
     <script>
         const MAX_FILE_SIZE_MB = {{ max_file_size_mb }};
@@ -541,6 +584,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             updateThemeUI(activeTheme);
+            if (isAuthenticated) {
+                updateHistoryBadge();
+            }
         });
 
         function scrollToUpload() {
@@ -691,6 +737,10 @@
                 // Update Navbar
                 const navAuth = document.getElementById('nav-auth-section');
                 navAuth.innerHTML = `
+                    <button type="button" class="btn-library-nav" onclick="openHistoryModal()" title="View past paper summaries & download PDFs">
+                        <i class="fas fa-bookmark"></i> <span>My Library</span>
+                        <span class="history-badge" id="history-badge-count">0</span>
+                    </button>
                     <div class="user-profile-pill">
                         <i class="fas fa-user-circle"></i>
                         <span class="user-email-text">${activeAuthEmail}</span>
@@ -700,6 +750,7 @@
                     </div>
                 `;
 
+                updateHistoryBadge();
                 alert("✅ Authentication complete! Welcome to ScholarCritic.");
 
             } catch (err) {
@@ -982,6 +1033,7 @@
                     renderResults(data);
                     resultsDashboard.style.display = 'block';
                     resultsDashboard.scrollIntoView({ behavior: 'smooth' });
+                    updateHistoryBadge();
                 }, 400);
 
             } catch (err) {
@@ -1104,6 +1156,188 @@
             a.href = url;
             a.download = "ScholarCritic_Data.json";
             a.click();
+        }
+
+        // --- PAPER HISTORY & LIBRARY CONTROLLER ---
+        async function updateHistoryBadge() {
+            if (!isAuthenticated) return;
+            try {
+                const res = await fetch('/history');
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('history-badge-count');
+                if (badge && data.history) {
+                    badge.innerText = data.history.length;
+                    badge.style.display = data.history.length > 0 ? 'inline-block' : 'none';
+                }
+            } catch (e) {
+                console.error("Failed to update history badge:", e);
+            }
+        }
+
+        function openHistoryModal() {
+            if (!isAuthenticated) {
+                openAuthModal();
+                return;
+            }
+            document.getElementById('history-modal').style.display = 'flex';
+            loadUserHistoryList();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').style.display = 'none';
+        }
+
+        async function loadUserHistoryList() {
+            const listContainer = document.getElementById('history-list');
+            const loadingBox = document.getElementById('history-loading');
+            const emptyBox = document.getElementById('history-empty');
+
+            listContainer.innerHTML = '';
+            loadingBox.style.display = 'block';
+            emptyBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/history');
+                const data = await res.json();
+                loadingBox.style.display = 'none';
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to fetch history');
+                }
+
+                const papers = data.history || [];
+                const badge = document.getElementById('history-badge-count');
+                if (badge) {
+                    badge.innerText = papers.length;
+                    badge.style.display = papers.length > 0 ? 'inline-block' : 'none';
+                }
+
+                if (papers.length === 0) {
+                    emptyBox.style.display = 'block';
+                    return;
+                }
+
+                listContainer.innerHTML = papers.map(item => {
+                    const sizeMB = (item.file_size / (1024 * 1024)).toFixed(2);
+                    const ovrScore = item.scores?.overall?.score || 0;
+                    const stars = getStars(ovrScore);
+                    const verdict = item.scores?.overall?.verdict || 'Evaluated';
+
+                    return `
+                        <div class="history-item-card" id="history-card-${item.id}">
+                            <div class="hcard-header">
+                                <div class="hcard-title-group">
+                                    <div class="hcard-title">${escapeHtml(item.paper_title)}</div>
+                                    <div class="hcard-meta">
+                                        <span><i class="fas fa-file-pdf"></i> ${escapeHtml(item.filename)}</span>
+                                        <span>•</span>
+                                        <span>${sizeMB} MB</span>
+                                        <span>•</span>
+                                        <span><i class="fas fa-calendar-alt"></i> ${escapeHtml(item.created_at)}</span>
+                                    </div>
+                                </div>
+                                <div class="hcard-score-badge">
+                                    <span class="hcard-stars">${stars}</span>
+                                    <span class="hcard-verdict">${escapeHtml(verdict)}</span>
+                                </div>
+                            </div>
+                            ${item.tldr ? `<p class="hcard-tldr"><strong>TL;DR:</strong> ${escapeHtml(item.tldr)}</p>` : ''}
+                            <div class="hcard-actions">
+                                <button type="button" class="btn-hcard-primary" onclick="loadCachedReview('${item.id}')">
+                                    <i class="fas fa-chart-pie"></i> View Review
+                                </button>
+                                <a href="/history/${item.id}/download" class="btn-hcard-secondary" download>
+                                    <i class="fas fa-download"></i> Download PDF
+                                </a>
+                                <button type="button" class="btn-hcard-delete" onclick="deleteHistoryItem('${item.id}')" title="Delete from Library">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                loadingBox.style.display = 'none';
+                listContainer.innerHTML = `
+                    <div style="color: #ef4444; padding: 20px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle"></i> Failed to load history: ${escapeHtml(err.message)}
+                    </div>
+                `;
+            }
+        }
+
+        async function loadCachedReview(paperId) {
+            closeHistoryModal();
+            const loadingCard = document.getElementById('loading-card');
+            const resultsDashboard = document.getElementById('results-dashboard');
+            loadingCard.style.display = 'block';
+            resultsDashboard.style.display = 'none';
+            loadingCard.scrollIntoView({ behavior: 'smooth' });
+
+            const statusText = document.getElementById('progress-status-text');
+            if (statusText) statusText.innerHTML = '<i class="fas fa-bolt" style="color: var(--coral);"></i> Loading cached peer review...';
+
+            try {
+                const res = await fetch(`/history/${paperId}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load cached review');
+
+                currentAnalysisResult = {
+                    status: 'success',
+                    analysis: data.analysis,
+                    paper_data: {
+                        title: data.analysis.metadata?.title || 'Cached Paper',
+                        total_pages: data.analysis.paper_data?.total_pages || 1,
+                        word_count: data.analysis.paper_data?.word_count || 0,
+                        is_scanned: false
+                    }
+                };
+
+                renderResults(currentAnalysisResult);
+                loadingCard.style.display = 'none';
+                resultsDashboard.style.display = 'block';
+                resultsDashboard.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (e) {
+                loadingCard.style.display = 'none';
+                alert(`Error loading review: ${e.message}`);
+            }
+        }
+
+        async function deleteHistoryItem(paperId) {
+            if (!confirm("Are you sure you want to delete this paper and its stored PDF from your library?")) return;
+            try {
+                const res = await fetch(`/history/${paperId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to delete paper');
+
+                const card = document.getElementById(`history-card-${paperId}`);
+                if (card) card.remove();
+
+                const remaining = document.querySelectorAll('.history-item-card').length;
+                const badge = document.getElementById('history-badge-count');
+                if (badge) {
+                    badge.innerText = remaining;
+                    badge.style.display = remaining > 0 ? 'inline-block' : 'none';
+                }
+                if (remaining === 0) {
+                    document.getElementById('history-empty').style.display = 'block';
+                }
+            } catch (e) {
+                alert(`Failed to delete: ${e.message}`);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
     </script>
 </body>

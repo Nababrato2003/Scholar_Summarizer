@@ -15,9 +15,12 @@ from google.genai import types
 
 load_dotenv()
 
-# Available candidate models in order of priority
-PRIMARY_MODEL = "gemini-3.5-flash"
-FALLBACK_MODEL = "gemini-3.8-flash"
+# Available candidate models in order of priority (uses lowest tokens and highest availability)
+CANDIDATE_MODELS = [
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite"
+]
 
 SYSTEM_INSTRUCTION = """
 You are an expert academic peer-reviewer and research analyst for top-tier venues (NeurIPS, ICML, Nature, Science).
@@ -124,26 +127,37 @@ def analyze_paper(paper_data: Union[Dict[str, Any], str]) -> Dict[str, Any]:
     """
     client = get_client()
 
-    # Normalize input
+    # Normalize and build compact, high-density academic prompt (strictly within Free Tier token budget)
     if isinstance(paper_data, dict):
-        full_text = paper_data.get("full_text", "")
         inferred_title = paper_data.get("title", "")
         sections = paper_data.get("sections", {})
+        full_text = paper_data.get("full_text", "")
         
-        # Build prompt payload
-        user_prompt = f"TITLE: {inferred_title}\n\n"
-        if sections.get("abstract"):
-            user_prompt += f"--- ABSTRACT ---\n{sections['abstract']}\n\n"
-        if sections.get("methodology"):
-            user_prompt += f"--- METHODOLOGY ---\n{sections['methodology']}\n\n"
-        if sections.get("results"):
-            user_prompt += f"--- RESULTS ---\n{sections['results']}\n\n"
-        if sections.get("conclusion"):
-            user_prompt += f"--- CONCLUSION ---\n{sections['conclusion']}\n\n"
-        
-        user_prompt += f"--- FULL PAPER TEXT ---\n{full_text}"
+        abstract = (sections.get("abstract") or "")[:1200]
+        methodology = (sections.get("methodology") or "")[:1500]
+        results = (sections.get("results") or "")[:1200]
+        conclusion = (sections.get("conclusion") or "")[:600]
+
+        parts = [f"TITLE: {inferred_title}"]
+        if abstract:
+            parts.append(f"--- ABSTRACT ---\n{abstract}")
+        if methodology:
+            parts.append(f"--- METHODOLOGY ---\n{methodology}")
+        if results:
+            parts.append(f"--- RESULTS & EXPERIMENTS ---\n{results}")
+        if conclusion:
+            parts.append(f"--- CONCLUSION ---\n{conclusion}")
+
+        # If sections were sparsely detected, supplement with core paper text
+        combined = "\n\n".join(parts)
+        if len(combined) < 2200 and full_text:
+            remaining_budget = max(600, 3800 - len(combined))
+            parts.append(f"--- CORE EXTRACTS ---\n{full_text[:remaining_budget]}")
+            combined = "\n\n".join(parts)
+
+        user_prompt = combined[:4000]
     else:
-        user_prompt = f"--- FULL PAPER TEXT ---\n{str(paper_data)}"
+        user_prompt = f"--- PAPER TEXT ---\n{str(paper_data)[:4000]}"
 
     # Configure Gemini with strict JSON mode
     config = types.GenerateContentConfig(
@@ -152,8 +166,9 @@ def analyze_paper(paper_data: Union[Dict[str, Any], str]) -> Dict[str, Any]:
         temperature=0.2,
     )
 
-    # Attempt with primary model, fallback if needed
-    for model_name in [PRIMARY_MODEL, FALLBACK_MODEL]:
+    # Attempt with candidate models in priority order
+    last_error = None
+    for model_name in CANDIDATE_MODELS:
         try:
             response = client.models.generate_content(
                 model=model_name,
@@ -164,11 +179,11 @@ def analyze_paper(paper_data: Union[Dict[str, Any], str]) -> Dict[str, Any]:
             parsed_json = json.loads(raw_text)
             return parsed_json
         except Exception as e:
-            if model_name == FALLBACK_MODEL:
-                raise RuntimeError(f"Critic Engine failed across models: {str(e)}")
+            last_error = e
+            print(f"Warning: {model_name} failed ({str(e)[:80]}). Trying next candidate...")
             continue
 
-    raise RuntimeError("Critic Engine failed to generate analysis.")
+    raise RuntimeError(f"Critic Engine failed across candidate models: {str(last_error)}")
 
 
 def summarize_text(text: str) -> str:
